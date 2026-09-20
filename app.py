@@ -33,9 +33,11 @@ class UploadForm(FlaskForm):
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-encoder = VGGEncoder('vgg_normalised.pth').to(device)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+encoder = VGGEncoder(os.path.join(BASE_DIR, 'vgg_normalised.pth')).to(device)
 decoder = Decoder().to(device)
-decoder.load_state_dict(torch.load('D:/Projects/ai-nst-project/Neural-Style-Transfer(NST)/experiment/final_exp/decoder_final.pth', map_location=device))
+decoder.load_state_dict(torch.load(os.path.join(BASE_DIR, 'experiment', 'final_exp', 'decoder_final.pth'), map_location=device))
 
 encoder.eval()
 decoder.eval()
