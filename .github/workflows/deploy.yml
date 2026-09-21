@@ -1,0 +1,78 @@
+name: NST CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+
+  test:
+    name: Test Neural Style Transfer
+    runs-on: [self-hosted, linux, x64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check Python version
+        run: |
+          python3.12 --version
+
+      - name: Create virtual environment
+        run: |
+          if [ ! -d "$HOME/nst-venv" ]; then
+            python3.12 -m venv "$HOME/nst-venv"
+          fi
+
+      - name: Install dependencies
+        run: |
+          source "$HOME/nst-venv/bin/activate"
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Python syntax check
+        run: |
+          source "$HOME/nst-venv/bin/activate"
+          python -m py_compile app.py
+          python -m py_compile train.py
+          python -m py_compile utils/models.py
+          python -m py_compile utils/utils.py
+
+      - name: Verify model files
+        run: |
+          test -f vgg_normalised.pth
+          test -f experiment/final_exp/decoder_final.pth
+
+      - name: Test imports
+        run: |
+          source "$HOME/nst-venv/bin/activate"
+          python -c "import torch; import torchvision; import flask; print('Dependencies OK')"
+
+  deploy:
+    name: Deploy to EC2
+    needs: test
+    runs-on: [self-hosted, linux, x64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy application
+        run: |
+          source "$HOME/nst-venv/bin/activate"
+
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+          sudo systemctl restart nst-app
+
+          sleep 10
+
+          sudo systemctl is-active --quiet nst-app
+
+      - name: Deployment successful
+        run: |
+          echo "NST application deployed successfully"
